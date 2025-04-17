@@ -196,7 +196,9 @@ void OneWayFileSync::printDirectoryRecursively(std::filesystem::path path)
 		if (dirEntry.is_regular_file())
 		{
 			std::cout << " - " << dirEntry.path().generic_string() << "\n"; // generic_string() shows "/" instead of string() which shows " to stay consistent
-			std::cout << "\tSize: " << dirEntry.file_size() << " bytes" << ", Last Modified: " << dirEntry.last_write_time() << "\n"; // Prints the associated metadata
+			std::filesystem::file_time_type lastWriteTime = dirEntry.last_write_time();
+			std::chrono::time_point<std::chrono::system_clock> printableWriteTime = std::chrono::clock_cast<std::chrono::system_clock>(lastWriteTime);
+			std::cout << "\tSize: " << dirEntry.file_size() << " bytes" << ", Last Modified: " << printableWriteTime << "\n"; // Prints the associated metadata
 		}
 	}
 }

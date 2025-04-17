@@ -134,6 +134,10 @@
     </ClCompile>
     <ClCompile Include="OneWayFileSync.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="DirectoryState.h" />
+    <ClInclude Include="OneWayFileSync.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

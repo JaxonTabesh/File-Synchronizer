@@ -1,4 +1,4 @@
-#include "OneWayFileSync.cpp"
+#include "OneWayFileSync.h"
 #include <iostream>
 
 int main(int argc, char* argv[])

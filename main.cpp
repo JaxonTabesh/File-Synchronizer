@@ -3,20 +3,16 @@
 
 int main(int argc, char* argv[])
 {
-	// Initial string (argv[0]) is the function name.
-	// Second String (argv[1]) indicates which process you want to run—i.e. one-way directory syncing, single backup, recurring backup, two-way directory syncing.
-	// or to indicate flags like --help
-	// Third/Fourth strings (argv[2]/(argv[3])) to indicate source and target, respectively.
-
 	try {
 		if (argc > 1)
 		{
 			if (std::string(argv[1]) == "--help")
 			{
+				std::cout << "\n";
 				std::cout << "Command:" << "\n";
-				std::cout << "\t" << "one-way-dir-sync strSourcePath strTargetPath" << "\n";
-				std::cout << "\t" << "two-way-dir-sync strSourcePath strTargetPath" << "\n";
-				std::cout << "\t" << "rec-backup strSourcePath strTargetPath boolInterval intInterval stringUnits (\"seconds\" \"minutes\" \"hours\" \"days\")" << "\n";
+				std::cout << "\t" << "one-way-dir-sync strSourcePath strTargetPath --dry-run" << "\n";
+				std::cout << "\t" << "two-way-dir-sync strSourcePath strTargetPath --dry-run" << "\n";
+				std::cout << "\t" << "rec-backup strSourcePath strTargetPath boolInterval intInterval stringUnits(\"s\" \"m\" \"h\" \"d\") --dry-run" << "\n";
 				std::cout << "General Options:" << "\n";
 				std::cout << "\t" << "--help" << "\n";
 			}
@@ -30,14 +26,22 @@ int main(int argc, char* argv[])
 				// Implement one-way-dir-sync
 				std::filesystem::path sourceDir = std::string(argv[2]);
 				std::filesystem::path targetDir = std::string(argv[3]);
+				//std::cout << sourceDir << "\n";
+				//std::cout << targetDir << "\n";
 				if (!std::filesystem::exists(sourceDir) || !std::filesystem::is_directory(sourceDir))
 				{
+					std::cout << "-" << "\n";
 					std::cerr << "Error: Source directory either doesn't exist or is not a directory." << "\n";
+					std::cout << "Please try again." << "\n";
+
 					return 1;
 				}
 				if (!std::filesystem::exists(targetDir) || !std::filesystem::is_directory(targetDir))
 				{
+					std::cout << "\n";
 					std::cerr << "Error: Target directory either doesn't exist or is not a directory." << "\n";
+					std::cout << "Please try again." << "\n";
+
 					return 1;
 				}
 				if (argc >= 5 && std::string(argv[4]) == "--dry-run")
@@ -54,15 +58,18 @@ int main(int argc, char* argv[])
 			else if (std::string(argv[1]) == "two-way-dir-sync")
 			{
 				// Implement two-way-dir-sync
+				std::cout << "\n";
 				std::cout << "Coming soon" << "\n";
 			}
 			else if (std::string(argv[1]) == "rec-backup")
 			{
 				// Implement recurring backup with options for how often and if only one backup
+				std::cout << "\n";
 				std::cout << "Coming soon" << "\n";
 			}
 			else
 			{
+				std::cout << "\n";
 				std::cout << "That is not a valid command" << "\n";
 				std::cout << "--help for a list of commands" << "\n";
 			}

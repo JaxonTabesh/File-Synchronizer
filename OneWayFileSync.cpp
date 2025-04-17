@@ -1,3 +1,4 @@
+#include "DirectoryState.cpp"
 #include <filesystem>
 #include <iostream>
 #include <regex>
@@ -8,182 +9,79 @@
 
 class OneWayFileSync {
 private:
-	std::filesystem::path sourcePath;
-	std::filesystem::path syncedPath;
-	std::set<std::string> sourceFilesSet = {};
-	std::set<std::string> syncedFilesSet = {};
-	std::set<std::string> sourceDirsSet = {};
-	std::set<std::string> syncedDirsSet = {};
-	// Use an unordered map for keys as paths and metadata as values for comparison
-	std::unordered_map<std::string, std::pair<std::uintmax_t, std::filesystem::file_time_type>> sourceMetadata = {};
-	std::vector<std::string> filesToCopy = {}; // Paths that exist in source but
+	DirectoryState sourcePath;
+	DirectoryState targetPath;
+	std::vector<std::filesystem::path> filesToCopy = {}; // Paths that exist in source but
 	// not synced or paths with differing metadata in source and synced
-	std::vector<std::string> filesToDelete = {}; // Files in synced but not in source
+	std::vector<std::filesystem::path> filesToDelete = {}; // Files in synced but not in source
 	// Dirs to create/delete in synced
-	std::vector<std::string> dirsToCopy = {};
-	std::vector<std::string> dirsToDelete = {};
+	std::vector<std::filesystem::path> dirsToCopy = {};
+	std::vector<std::filesystem::path> dirsToDelete = {};
 
-	// stripTopLevelDirectoryFromRelativePath
-	std::string stripTopLvlDirFrmRelPath(std::filesystem::directory_entry dirEntry, bool isSourceEntry)
+	std::filesystem::path stripOuterDirectory(std::filesystem::path dirEntry, bool isSourceEntry)
 	{
-		//if (isSourceEntry){}
-		// TODO: use more built-in/safer tooling
-		//std::string dirEntryString = dirEntry.path().generic_string();
-		// TODO: POTENTIALLY USE TEMPORARILY TO MAKE THE FUNCTION SAFER
-		std::string dirEntryString = dirEntry.path().relative_path().generic_string();
-
-		// TODO: Update to more modular method. Currently, this will not function properly with more than 2 of the same named nested dirs
-		std::string stem = ".*?";
-		if (isSourceEntry)
-		{
-			stem += sourcePath.stem().generic_string();
-		}
-		else
-		{
-			stem += syncedPath.stem().generic_string();
-		}
-		stem += "/";
-
-		std::regex pattern(stem);
-		std::string path = std::regex_replace(dirEntryString, pattern, "");
-		//// TODO: add error checking for the regex in case the format is not what is expected
-		return path;
+		return dirEntry.lexically_relative(isSourceEntry ? sourcePath.absPath : targetPath.absPath);
 	}
-	static std::string combineRelativePaths(std::string path1, std::string path2)
+	void updateCollections()
 	{
-		// TODO: use built-in, safe tooling
-		return path1 + "/" + path2;
-	}
-	void clearCollections()
-	{
-		sourceFilesSet.clear();
-		syncedFilesSet.clear();
-		sourceDirsSet.clear();
-		syncedDirsSet.clear();
-		sourceMetadata.clear();
 		filesToCopy.clear();
 		filesToDelete.clear();
 		dirsToCopy.clear();
 		dirsToDelete.clear();
-	}
-	void updateCollections()
-	{
-		clearCollections();
-		fillDirSets();
-		fillDirCopyDeleteSets();
-		fillFileSets();
-		fillSourceMetadata();
+		sourcePath.scan();
+		targetPath.scan();
 		fillFilesToCopyDelete();
+		fillDirCopyDeleteSets();
 	}
 	void fillFilesToCopyDelete()
 	{
-		// use the stripping function instead of dirEntry's
-		for (const auto& dirEntry : std::filesystem::recursive_directory_iterator(syncedPath))
+		for (const auto& dirEntry : std::filesystem::recursive_directory_iterator(targetPath.absPath))
 		{
 			if (dirEntry.is_regular_file())
 			{
-				std::pair<std::uintmax_t, std::filesystem::file_time_type> fsLwt = { dirEntry.file_size(), dirEntry.last_write_time() };
-				if (sourceFilesSet.contains(stripTopLvlDirFrmRelPath(dirEntry, false)) && sourceMetadata[stripTopLvlDirFrmRelPath(dirEntry, false)] != fsLwt)
+				if (sourcePath.files.contains(stripOuterDirectory(dirEntry, false)) && sourcePath.metadata[stripOuterDirectory(dirEntry, false)] != targetPath.metadata[stripOuterDirectory(dirEntry, false)])
 				{
-					filesToCopy.push_back(stripTopLvlDirFrmRelPath(dirEntry, false));
+					filesToCopy.push_back(stripOuterDirectory(dirEntry, false));
 				}
-				else if (!sourceFilesSet.contains(stripTopLvlDirFrmRelPath(dirEntry, false)))
+				else if (!sourcePath.files.contains(stripOuterDirectory(dirEntry, false)))
 				{
-					filesToDelete.push_back(stripTopLvlDirFrmRelPath(dirEntry, false));
+					filesToDelete.push_back(stripOuterDirectory(dirEntry, false));
 				}
 				// else if it contains dirEntry and has equivalent metadata then no need to do anything
 			}
 		}
-		for (const auto& dirEntry : std::filesystem::recursive_directory_iterator(sourcePath))
+		for (const auto& dirEntry : std::filesystem::recursive_directory_iterator(sourcePath.absPath))
 		{
 			if (dirEntry.is_regular_file())
 			{
-				if (!syncedFilesSet.contains(stripTopLvlDirFrmRelPath(dirEntry, true)))
+				if (!targetPath.files.contains(stripOuterDirectory(dirEntry, true)))
 				{
-					filesToCopy.push_back(stripTopLvlDirFrmRelPath(dirEntry, true));
+					filesToCopy.push_back(stripOuterDirectory(dirEntry, true));
 				}
 			}
 		}
 
 	}
-	void fillSourceMetadata()
-	{
-		// Insert the sourceFilesSet with the sourceDir files
-		for (const auto& dirEntry : std::filesystem::recursive_directory_iterator(sourcePath))
-		{
-			if (dirEntry.is_regular_file())
-			{
-				// Pair for the file_size and last write time, respectively
-				std::pair<std::uintmax_t, std::filesystem::file_time_type> fsLwt = { dirEntry.file_size(), dirEntry.last_write_time() };
-				// Add the dirEntry to map with the Pair of relevant metadata
-				sourceMetadata[stripTopLvlDirFrmRelPath(dirEntry, true)] = fsLwt;
-			}
-		}
-	}
-	void fillFileSets() {
-		for (const auto& dirEntry : std::filesystem::recursive_directory_iterator(sourcePath))
-		{
-			if (dirEntry.is_regular_file())
-			{
-				sourceFilesSet.insert(stripTopLvlDirFrmRelPath(dirEntry, true));
-			}
-		}
-		for (const auto& dirEntry : std::filesystem::recursive_directory_iterator(syncedPath))
-		{
-			if (dirEntry.is_regular_file())
-			{
-				syncedFilesSet.insert(stripTopLvlDirFrmRelPath(dirEntry, false));
-			}
-		}
-	}
 	void fillDirCopyDeleteSets()
 	{
 		// Fill the dirsToDelete and dirsToCopy vectors
-		for (const auto& dir : std::filesystem::recursive_directory_iterator(syncedPath))
+		for (const auto& entry : std::filesystem::recursive_directory_iterator(targetPath.absPath))
 		{
-			if (dir.is_directory() && !sourceDirsSet.contains(stripTopLvlDirFrmRelPath(dir, false)))
+			if (entry.is_directory() && !sourcePath.dirs.contains(stripOuterDirectory(entry, false)))
 			{
-				dirsToDelete.push_back(stripTopLvlDirFrmRelPath(dir, false));
+				dirsToDelete.push_back(stripOuterDirectory(entry, false));
 			}
 		}
-		for (const auto& dir : std::filesystem::recursive_directory_iterator(sourcePath))
+		for (const auto& dir : std::filesystem::recursive_directory_iterator(sourcePath.absPath))
 		{
-			if (dir.is_directory() && !syncedDirsSet.contains(stripTopLvlDirFrmRelPath(dir, true)))
+			if (dir.is_directory() && !targetPath.dirs.contains(stripOuterDirectory(dir, true)))
 			{
-				dirsToCopy.push_back(stripTopLvlDirFrmRelPath(dir, true));
-			}
-		}
-	}
-	void fillDirSets()
-	{
-		// Store the directories for source/synced dirs
-		for (const auto& dir : std::filesystem::recursive_directory_iterator(sourcePath))
-		{
-			if (dir.is_directory())
-			{
-				sourceDirsSet.insert(stripTopLvlDirFrmRelPath(dir, true));
-			}
-		}
-		for (const auto& dir : std::filesystem::recursive_directory_iterator(syncedPath))
-		{
-			if (dir.is_directory())
-			{
-				syncedDirsSet.insert(stripTopLvlDirFrmRelPath(dir, false));
+				dirsToCopy.push_back(stripOuterDirectory(dir, true));
 			}
 		}
 	}
 	void printCollections()
 	{
-		//std::cout << "sourceFilesSet:" << "\n";
-		//for (const auto& dir : sourceFilesSet)
-		//{
-		//	std::cout << "\t" << dir << "\n";
-		//}
-		//std::cout << "syncedFilesSet:" << "\n";
-		//for (const auto& dir : syncedFilesSet)
-		//{
-		//	std::cout << "\t" << dir << "\n";
-		//}
 		std::cout << "filesToCopy:" << "\n";
 		for (const auto& path : filesToCopy)
 		{
@@ -194,16 +92,6 @@ private:
 		{
 			std::cout << "\t" << path << "\n";
 		}
-		//std::cout << "sourceDirsSet:" << "\n";
-		//for (const auto& dir : sourceDirsSet)
-		//{
-		//	std::cout << "\t" << dir << "\n";
-		//}
-		//std::cout << "syncedDirsSet:" << "\n";
-		//for (const auto& dir : syncedDirsSet)
-		//{
-		//	std::cout << "\t" << dir << "\n";
-		//}
 		std::cout << "dirsToCopy:" << "\n";
 		for (const auto& dir : dirsToCopy)
 		{
@@ -217,66 +105,82 @@ private:
 	}
 public:
 	// Constructor requires a source directory and a synced directory in either string or std::filesystem::path
-	OneWayFileSync(std::filesystem::path source, std::filesystem::path synced) : sourcePath(source), syncedPath(synced) {}
+	OneWayFileSync(std::filesystem::path source, std::filesystem::path synced) : sourcePath(source), targetPath(synced) {}
 	void beginSync(bool dryRun = false)
 	{
+#ifdef _WIN32
+		system("cls");
+#else // If MacOS/Linux
+		system("clear");
+#endif
+		if (!dryRun)
+		{
+			std::cout << "One-Way-Sync Active" << "\n";
+			std::cout << "\tSource Path: " << "\n\t\t" << sourcePath.absPath.generic_string() << "\n";
+			std::cout << "\tTarget Path: " << "\n\t\t" << targetPath.absPath.generic_string() << "\n";
+		}
 		// TODO: use built-in tooling for copying recursively. Use more copyOptions instead of custom code.
 		while (true)
 		{
 			updateCollections();
+			if (dryRun)
+			{
+				std::cout << "One-Way-Sync Active (DryRun Mode)" << "\n";
+				std::cout << "\tSource Path: " << "\n\t\t" << sourcePath.absPath.generic_string() << "\n";
+				std::cout << "\tTarget Path: " << "\n\t\t" << targetPath.absPath.generic_string() << "\n";
+			}
 
-			// delete extra directories in cloud_synced
 			for (const auto& dir : dirsToDelete)
 			{
-				std::string path = combineRelativePaths(syncedPath.generic_string(), dir);
+				std::filesystem::path path = targetPath.absPath / dir;
 				if (std::filesystem::directory_entry(path).exists())
 				{
 					if (!dryRun)
 					{
 						std::filesystem::remove_all(path);
 					}
-					std::cout << "Deleted directory: \"" << "\"" << path << "\n";
+					std::cout << "Deleted directory:" << "\n\t" << path.generic_string() << "\n";
 				}
 			}
 			// delete files in cloud_synced
 			for (const auto& file : filesToDelete)
 			{
-				std::string path = combineRelativePaths(syncedPath.generic_string(), file);
+				std::filesystem::path path = targetPath.absPath / file;
 				if (std::filesystem::directory_entry(path).is_regular_file())
 				{
 					if (!dryRun)
 					{
 						std::filesystem::remove(path);
 					}
-					std::cout << "Deleted file: \"" << path << "\"" << "\n";
+					std::cout << "Deleted file:" << "\n\t" << path.generic_string() << "\n";
 				}
 			}
 			// create directories to cloud_synced
 			for (const auto& dir : dirsToCopy)
 			{
-				std::string path = combineRelativePaths(syncedPath.generic_string(), dir);
+				std::filesystem::path path = targetPath.absPath / dir;
 				if (!std::filesystem::directory_entry(path).exists())
 				{
 					if (!dryRun)
 					{
 						std::filesystem::create_directory(path);
 					}
-					std::cout << "Created directory: \"" << path << "\"" << "\n";
+					std::cout << "Created directory:" << "\n\t" << path.generic_string() << "\n";
 				}
 			}
 			// copy files to cloud_synced
 			for (const auto& file : filesToCopy)
 			{
-				std::string fromPath = combineRelativePaths(sourcePath.generic_string(), file);
-				std::string toPath = combineRelativePaths(syncedPath.generic_string(), file);
+				std::filesystem::path fromPath = sourcePath.absPath / file;
+				std::filesystem::path toPath = targetPath.absPath / file;
 				if (std::filesystem::directory_entry(fromPath).is_regular_file() && (/*If toPath exists then check if equivalent with fromPath*/ std::filesystem::is_regular_file(toPath) ? !std::filesystem::equivalent(fromPath, toPath) : true))
 				{
 					if (!dryRun)
 					{
 						std::filesystem::copy(fromPath, toPath, std::filesystem::copy_options::overwrite_existing);
 					}
-					std::cout << "Copied file from: \"" << fromPath << "\"" << "\n";
-					std::cout << "\tTo: \"" << toPath << "\"" << "\n";
+					std::cout << "Copied file from:" << "\n\t" << fromPath.generic_string() << "\n";
+					std::cout << "To:" << "\n\t" << toPath.generic_string() << "\n";
 				}
 			}
 
@@ -292,7 +196,7 @@ public:
 		}
 	}
 
-	static void printDirectoryRecursively(std::string path)
+	static void printDirectoryRecursively(std::filesystem::path path)
 	{
 		std::filesystem::path inputPath(path);
 
@@ -317,13 +221,7 @@ public:
 	{
 		while (true)
 		{
-			clearCollections();
-			fillDirSets();
-			fillDirCopyDeleteSets();
-			fillFileSets();
-			fillSourceMetadata();
-			fillFilesToCopyDelete();
-
+			updateCollections();
 			printCollections();
 			std::this_thread::sleep_for(std::chrono::seconds(1));
 #ifdef _WIN32

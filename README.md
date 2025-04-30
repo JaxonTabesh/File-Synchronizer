@@ -29,16 +29,17 @@ This tool serves as a practical demonstration of applying modern C++ features to
 To build this project on Windows, **you must use the MSVC compiler** (from Visual Studio 2019 or newer). It provides the most reliable support for `std::filesystem`.
 
 
-**Primary Command:**
+**Primary Commands:**
 
-`one-way-dir-sync <source> <target>`: Executes the synchronization.
+* `one-way-dir-sync <source> <target>`: Performs continuous synchronization from source to target.
+* `one-time-backup <source> <target>`: Performs a one-time backup from source to target.
 
 **Options:**
 
-* `--dry-run`: Simulates the sync and prints intended actions. Recommended for verification.
-* `--help`: Displays usage details.
+* `--dry-run`: Simulates the primary commands and prints intended actions. Recommended for verification.
+* `--help`: Displays available commands.
 
-(The program runs continuously in sync mode; use Ctrl+C to terminate.)
+(The syncing function runs continuously in sync mode; use Ctrl+C to terminate.)
 
 ## Example
 

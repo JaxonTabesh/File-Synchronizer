@@ -1,4 +1,4 @@
-#include "OneWayFileSync.h"
+#include "FileSyncManager.h"
 #include <iostream>
 
 int main(int argc, char* argv[])
@@ -12,6 +12,7 @@ int main(int argc, char* argv[])
 				std::cout << "Command:" << "\n";
 				std::cout << "\t" << "one-way-dir-sync strSourcePath strTargetPath --dry-run" << "\n";
 				std::cout << "\t" << "two-way-dir-sync strSourcePath strTargetPath --dry-run" << "\n";
+				std::cout << "\t" << "one-time-backup strSourcePath strTargetPath" << "\n";
 				std::cout << "\t" << "rec-backup strSourcePath strTargetPath boolInterval intInterval stringUnits(\"s\" \"m\" \"h\" \"d\") --dry-run" << "\n";
 				std::cout << "General Options:" << "\n";
 				std::cout << "\t" << "--help" << "\n";
@@ -46,13 +47,13 @@ int main(int argc, char* argv[])
 				}
 				if (argc >= 5 && std::string(argv[4]) == "--dry-run")
 				{
-					OneWayFileSync oneWayFileSync(sourceDir, targetDir);
-					oneWayFileSync.beginSync(true);
+					FileSyncManager fileSyncManager(sourceDir, targetDir);
+					fileSyncManager.beginOneWaySync(true);
 				}
 				else
 				{
-					OneWayFileSync oneWayFileSync(sourceDir, targetDir);
-					oneWayFileSync.beginSync();
+					FileSyncManager fileSyncManager(sourceDir, targetDir);
+					fileSyncManager.beginOneWaySync();
 				}
 			}
 			else if (std::string(argv[1]) == "two-way-dir-sync")
@@ -60,6 +61,41 @@ int main(int argc, char* argv[])
 				// Implement two-way-dir-sync
 				std::cout << "\n";
 				std::cout << "Coming soon" << "\n";
+			}
+			else if (std::string(argv[1]) == "one-time-backup")
+			{
+				if (argc < 4)
+				{
+					std::cerr << "Missing argument(s)" << "\n";
+					return 1;
+				}
+				std::filesystem::path sourceDir = std::string(argv[2]);
+				std::filesystem::path targetDir = std::string(argv[3]);
+
+				if (!std::filesystem::exists(sourceDir) || !std::filesystem::is_directory(sourceDir))
+				{
+					std::cout << "-" << "\n";
+					std::cerr << "Error: Source directory either doesn't exist or is not a directory." << "\n";
+					std::cout << "Please try again." << "\n";
+
+					return 1;
+				}
+				if (!std::filesystem::exists(targetDir) || !std::filesystem::is_directory(targetDir))
+				{
+					std::cout << "\n";
+					std::cerr << "Error: Target directory either doesn't exist or is not a directory." << "\n";
+					std::cout << "Please try again." << "\n";
+
+					return 1;
+				}
+				if (argc >= 5 && std::string(argv[4]) == "--dry-run")
+				{
+					FileSyncManager::oneTimeBackup(sourceDir, targetDir, true);
+				}
+				else
+				{
+					FileSyncManager::oneTimeBackup(sourceDir, targetDir);
+				}
 			}
 			else if (std::string(argv[1]) == "rec-backup")
 			{

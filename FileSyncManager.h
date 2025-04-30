@@ -11,7 +11,7 @@
 #include <unordered_map>
 #include <vector>
 
-class OneWayFileSync {
+class FileSyncManager {
 private:
 	DirectoryState sourcePath;
 	DirectoryState targetPath;
@@ -29,8 +29,9 @@ private:
 	void printCollections();
 
 public:
-	OneWayFileSync(std::filesystem::path source, std::filesystem::path synced);
-	void beginSync(bool dryRun = false);
+	FileSyncManager(std::filesystem::path source, std::filesystem::path synced);
+	void beginOneWaySync(bool dryRun = false);
+	void beginOneWayComparing();
+	static void oneTimeBackup(std::filesystem::path source, std::filesystem::path backup, bool dryRun = false);
 	static void printDirectoryRecursively(std::filesystem::path path);
-	void beginComparing();
 };

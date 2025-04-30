@@ -132,11 +132,11 @@
     <ClCompile Include="main.cpp">
       <LanguageStandard Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">stdcpp23</LanguageStandard>
     </ClCompile>
-    <ClCompile Include="OneWayFileSync.cpp" />
+    <ClCompile Include="FileSyncManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DirectoryState.h" />
-    <ClInclude Include="OneWayFileSync.h" />
+    <ClInclude Include="FileSyncManager.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

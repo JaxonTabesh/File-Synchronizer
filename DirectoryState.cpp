@@ -23,7 +23,6 @@ void DirectoryState::scan()
 		if (entry.is_regular_file())
 		{
 			files.insert(relPath);
-			//FileInfo fileInfo(entry.file_size(), entry.last_write_time());
 			metadata[relPath] = FileInfo(entry.file_size(), entry.last_write_time());
 		}
 		else if (entry.is_directory())

@@ -18,7 +18,7 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="OneWayFileSync.cpp">
+    <ClCompile Include="FileSyncManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="DirectoryState.cpp">
@@ -29,7 +29,7 @@
     <ClInclude Include="DirectoryState.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="OneWayFileSync.h">
+    <ClInclude Include="FileSyncManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
